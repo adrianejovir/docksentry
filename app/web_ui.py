@@ -102,69 +102,107 @@ def create_handler(config, checker, bot, password=None):
 <html lang="{config.language}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Docksentry</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+:root {{
+    --bg-deep: #1f1633;
+    --bg-darker: #150f23;
+    --bg-surface: #241b44;
+    --border: #362d59;
+    --text: #ffffff;
+    --text-muted: #a8a3b8;
+    --accent: #c2ef4e;
+    --accent-purple: #6a5fc1;
+    --btn-bg: #79628c;
+    --btn-hover: #8a739a;
+    --radius: 8px;
+    --radius-lg: 12px;
+}}
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: #0d1117; color: #c9d1d9; line-height: 1.6; }}
-.header {{ background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; }}
-.header h1 {{ font-size: 18px; display: inline; }}
-.header h1 span {{ color: #58a6ff; }}
+html, body {{ touch-action: manipulation; }}
+body {{ font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-deep); color: var(--text); line-height: 1.5; min-height: 100vh; }}
+.header {{ background: var(--bg-darker); border-bottom: 1px solid var(--border); padding: 16px 20px; position: sticky; top: 0; z-index: 100; }}
+.header-content {{ max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }}
+.header h1 {{ font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }}
+.menu-toggle {{ display: none; background: none; border: none; color: var(--text); font-size: 24px; cursor: pointer; padding: 4px; }}
 nav {{ margin-top: 12px; }}
-nav a {{ color: #8b949e; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 14px; }}
-nav a:hover {{ color: #c9d1d9; background: #21262d; }}
-nav a.active {{ color: #58a6ff; background: #1f2937; }}
-.content {{ max-width: 900px; margin: 24px auto; padding: 0 24px; }}
-.card {{ background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 16px; }}
-.card h2 {{ font-size: 16px; margin-bottom: 12px; color: #58a6ff; }}
-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-th {{ text-align: left; padding: 8px 12px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: 500; }}
-td {{ padding: 8px 12px; border-bottom: 1px solid #21262d; }}
-tr:hover {{ background: #1c2128; }}
-.healthy {{ color: #3fb950; }}
-.badge {{ display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; }}
-.badge-green {{ background: #1a3a2a; color: #3fb950; }}
-.badge-yellow {{ background: #3a2f1a; color: #d29922; }}
-.badge-blue {{ background: #1a2a3a; color: #58a6ff; }}
+nav a {{ color: var(--text-muted); text-decoration: none; padding: 10px 14px; border-radius: var(--radius); font-size: 14px; font-weight: 500; display: inline-block; transition: all 0.2s; }}
+nav a:hover {{ color: var(--text); background: var(--border); }}
+nav a.active {{ color: var(--accent); background: rgba(194, 239, 78, 0.1); }}
+.content {{ max-width: 900px; margin: 24px auto; padding: 0 16px 24px; }}
+.card {{ background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }}
+.card h2 {{ font-size: 16px; margin-bottom: 16px; color: var(--accent); font-weight: 600; letter-spacing: -0.3px; }}
+.table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+table {{ width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }}
+th {{ text-align: left; padding: 10px 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }}
+td {{ padding: 12px; border-bottom: 1px solid var(--border); }}
+tr:hover {{ background: rgba(54, 45, 89, 0.3); }}
+.code {{ font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-size: 13px; color: #dcdcaa; word-break: break-all; }}
+.badge {{ display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }}
+.badge-green {{ background: rgba(63, 185, 80, 0.15); color: #3fb950; }}
+.badge-yellow {{ background: rgba(210, 153, 34, 0.15); color: #d29922; }}
+.badge-blue {{ background: rgba(88, 166, 255, 0.15); color: #58a6ff; }}
+.badge-red {{ background: rgba(248, 81, 73, 0.15); color: #f85149; }}
+.badge-purple {{ background: rgba(188, 140, 255, 0.15); color: #bc8cff; }}
+.badge-accent {{ background: rgba(194, 239, 78, 0.15); color: var(--accent); }}
 form {{ margin-top: 8px; }}
-label {{ display: block; margin-bottom: 4px; font-size: 14px; color: #8b949e; }}
-input, select {{ background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px;
-    border-radius: 6px; font-size: 14px; width: 100%; margin-bottom: 12px; }}
-select {{ cursor: pointer; }}
-.btn {{ background: #238636; color: #fff; border: none; padding: 8px 20px; border-radius: 6px;
-    cursor: pointer; font-size: 14px; }}
-.btn:hover {{ background: #2ea043; }}
-.btn-blue {{ background: #1f6feb; }}
-.btn-blue:hover {{ background: #388bfd; }}
+label {{ display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }}
+input, select {{ background: var(--bg-darker); border: 1px solid var(--border); color: var(--text); padding: 12px 14px;
+    border-radius: var(--radius); font-size: 15px; width: 100%; margin-bottom: 16px; -webkit-appearance: none; }}
+select {{ cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a8a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }}
+input:focus, select:focus {{ outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(106, 95, 193, 0.2); }}
+.checkbox-label {{ display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px; }}
+.checkbox-label input {{ width: auto; margin: 0; }}
+.btn {{ background: var(--btn-bg); color: var(--text); border: none; padding: 12px 24px; border-radius: var(--radius);
+    cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; width: 100%; }}
+.btn:hover {{ background: var(--btn-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }}
+.btn-accent {{ background: var(--accent); color: var(--bg-deep); }}
+.btn-accent:hover {{ background: #d4f06a; }}
+.btn-outline {{ background: transparent; color: var(--text-muted); border: 1px solid var(--border); }}
+.btn-outline:hover {{ color: var(--text); border-color: var(--text-muted); }}
 .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
-@media (max-width: 600px) {{ .grid {{ grid-template-columns: 1fr; }} }}
-.stat {{ text-align: center; }}
-.stat .num {{ font-size: 32px; font-weight: bold; color: #58a6ff; }}
-.stat .label {{ font-size: 12px; color: #8b949e; }}
-.badge-red {{ background: #3a1a1a; color: #f85149; }}
-.badge-purple {{ background: #2a1a3a; color: #bc8cff; }}
-.btn-sm {{ padding: 3px 10px; border-radius: 4px; font-size: 12px; border: none; cursor: pointer; }}
-.toggle {{ position: relative; display: inline-block; width: 36px; height: 20px; vertical-align: middle; }}
-.toggle input {{ opacity: 0; width: 0; height: 0; }}
+@media (max-width: 600px) {{
+    .grid {{ grid-template-columns: 1fr; }}
+    nav {{ display: none; }}
+    nav.open {{ display: block; margin-top: 16px; }}
+    nav a {{ display: block; text-align: center; margin-bottom: 4px; }}
+    .menu-toggle {{ display: block; }}
+    .content {{ padding: 0 12px 24px; }}
+    .card {{ padding: 16px; border-radius: var(--radius); }}
+    .btn {{ padding: 14px 20px; font-size: 15px; }}
+}}
+.stat {{ text-align: center; padding: 16px; }}
+.stat .num {{ font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; }}
+.stat .label {{ font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }}
+.btn-sm {{ padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px; }}
+.toggle {{ position: relative; display: inline-block; width: 44px; height: 24px; vertical-align: middle; }}
+.toggle input {{ opacity: 0; width: 0; height: 0; position: absolute; }}
 .toggle .slider {{ position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background: #30363d; border-radius: 20px; transition: 0.2s; }}
-.toggle .slider:before {{ content: ""; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px;
-    background: #8b949e; border-radius: 50%; transition: 0.2s; }}
-.toggle input:checked + .slider {{ background: #238636; }}
-.toggle input:checked + .slider:before {{ transform: translateX(16px); background: #fff; }}
+    background: var(--border); border-radius: 24px; transition: 0.3s; }}
+.toggle .slider:before {{ content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background: var(--text); border-radius: 50%; transition: 0.3s; }}
+.toggle input:checked + .slider {{ background: var(--accent); }}
+.toggle input:checked + .slider:before {{ transform: translateX(20px); }}
 .btn-green {{ background: #238636; color: #fff; }}
 .btn-green:hover {{ background: #2ea043; }}
-.btn-outline {{ background: transparent; color: #8b949e; border: 1px solid #30363d; }}
-.btn-outline:hover {{ color: #c9d1d9; border-color: #8b949e; }}
-pre {{ background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 16px;
-    overflow-x: auto; font-size: 13px; line-height: 1.5; color: #c9d1d9; white-space: pre-wrap; word-wrap: break-word; }}
-.footer {{ text-align: center; padding: 24px; font-size: 12px; color: #484f58; }}
+pre {{ background: var(--bg-darker); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
+    overflow-x: auto; font-size: 12px; line-height: 1.6; color: #dcdcaa; font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; }}
+.footer {{ text-align: center; padding: 32px 16px; font-size: 12px; color: var(--text-muted); }}
+.actions {{ display: flex; gap: 6px; flex-wrap: wrap; }}
 </style>
+<script>
+function toggleMenu() {{ document.querySelector('nav').classList.toggle('open'); }}
+</script>
 </head>
 <body>
 <div class="header">
-<h1><img src="data:image/png;base64,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" alt="Logo" style="height:32px;vertical-align:middle;margin-right:8px"> <span>Docksentry</span></h1>
+<div class="header-content">
+<h1>Docksentry</h1>
+<button class="menu-toggle" onclick="toggleMenu()">☰</button>
+</div>
 <nav>{nav_html}</nav>
 </div>
 <div class="content">
@@ -329,9 +367,9 @@ pre {{ background: #0d1117; border: 1px solid #30363d; border-radius: 6px; paddi
 
                 rows += f"""<tr>
 <td>{c['name']}{badges}</td>
-<td><code>{c['image']}</code></td>
+<td><span class="code">{c['image']}</span></td>
 <td>{status_badge}</td>
-<td>{actions}</td>
+<td><div class="actions">{actions}</div></td>
 </tr>"""
 
             content = f"""
@@ -349,13 +387,16 @@ pre {{ background: #0d1117; border: 1px solid #30363d; border-radius: 6px; paddi
 <div class="card">
 <h2>{t("web_containers")}</h2>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<span style="font-size:12px;color:#8b949e">{t("web_containers_running", count=len(containers))}</span>
-<a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">{t("web_check_updates")}</a>
+<span style="font-size:12px;color:var(--text-muted)">{t("web_containers_running", count=len(containers))}</span>
+<a href="/api/check" class="btn btn-accent">{t("web_check_updates")}</a>
 </div>
+<div class="table-wrapper">
+<div class="table-wrapper">
 <table>
 <tr><th>{t("web_name")}</th><th>{t("web_image")}</th><th>{t("web_status")}</th><th>{t("web_actions")}</th></tr>
 {rows}
 </table>
+</div>
 </div>"""
 
             self._send_html(self._render_page(content, "status"))
