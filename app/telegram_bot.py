@@ -1023,6 +1023,59 @@ class TelegramBot:
             self._health_monitor.remove_ignore(name)
             self.send_message(f"🔔 Now monitoring `{name}` for alerts")
 
+        # /uptime - Show uptime targets
+        elif text == "/uptime":
+            if not hasattr(self, "_uptime_monitor"):
+                self.send_message("❌ Uptime monitor not available")
+                return
+            targets = self._uptime_monitor.get_targets()
+            if not targets:
+                self.send_message("⏱️ No uptime targets configured.\nUse /add-uptime <url> to add one.")
+                return
+            msg = "⏱️ *Uptime Targets:*\n"
+            for t in targets:
+                msg += f"• {t['name']}: {t['url']}\n"
+            self.send_message(msg)
+
+        # /add-uptime <url> - Add uptime target
+        elif text.startswith("/add-uptime "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /add-uptime <url>")
+                return
+            url = parts[1].strip()
+            if not hasattr(self, "_uptime_monitor"):
+                self.send_message("❌ Uptime monitor not available")
+                return
+            name = url.split("//")[1].split("/")[0] if "//" in url else url
+            self._uptime_monitor.add_target(name, url, 200)
+            self.send_message(f"✅ Added uptime monitor for `{name}`\n{url}")
+
+        # /remove-uptime <name> - Remove uptime target
+        elif text.startswith("/remove-uptime "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /remove-uptime <name>")
+                return
+            name = parts[1].strip()
+            if not hasattr(self, "_uptime_monitor"):
+                self.send_message("❌ Uptime monitor not available")
+                return
+            self._uptime_monitor.remove_target(name)
+            self.send_message(f"✅ Removed uptime target `{name}`")
+
+        # /check-uptime - Check all uptime now
+        elif text == "/check-uptime":
+            if not hasattr(self, "_uptime_monitor"):
+                self.send_message("❌ Uptime monitor not available")
+                return
+            self.send_message("⏱️ Checking uptime...")
+            results = self._uptime_monitor.check_now()
+            msg = "⏱️ *Uptime Check Results:*\n"
+            for r in results:
+                msg += f"{r['status']} {r['name']}: {r.get('code', 'N/A')}\n"
+            self.send_message(msg)
+
         # /inspect <container> - Inspect container details
         elif text.startswith("/inspect "):
             parts = text.split(maxsplit=1)
@@ -1109,7 +1162,12 @@ class TelegramBot:
                 + "*🔔 Health Alerts:*\n"
                 + "🔔 /alerts — Toggle alerts on/off\n"
                 + "🔇 /ignore <name> — Ignore container\n"
-                + "🔔 /unignore <name> — Monitor container"
+                + "🔔 /unignore <name> — Monitor container\n\n"
+                + "*⏱️ Uptime Monitor:*\n"
+                + "⏱️ /uptime — List targets\n"
+                + "➕ /add-uptime <url> — Add target\n"
+                + "🗑️ /remove-uptime <name> — Remove target\n"
+                + "🔄 /check-uptime — Check now"
             )
 
         # Groq AI agent (natural language Docker management)

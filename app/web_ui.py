@@ -89,6 +89,7 @@ def create_handler(config, checker, bot, password=None):
 
             nav_items = [
                 ("status", f'📊 {t("web_nav_status")}', "/"),
+                ("uptime", f'⏱️ Uptime', "/uptime"),
                 ("history", f'📋 {t("web_nav_history")}', "/history"),
                 ("logs", f'📜 {t("web_nav_logs")}', "/logs"),
                 ("settings", f'⚙️ {t("web_nav_settings")}', "/settings"),
@@ -220,6 +221,8 @@ function toggleMenu() {{ document.querySelector('nav').classList.toggle('open');
                 self._page_status()
             elif path == "/history":
                 self._page_history()
+            elif path == "/uptime":
+                self._page_uptime()
             elif path == "/logs":
                 self._page_logs()
             elif path == "/settings":
@@ -276,6 +279,32 @@ function toggleMenu() {{ document.querySelector('nav').classList.toggle('open');
                 config.save_persistent()
 
                 self._send_redirect("/settings?saved=1")
+            elif path == "/uptime":
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length).decode()
+                params = parse_qs(body)
+                
+                # Add new target
+                if "url" in params and params["url"][0].strip():
+                    url = params["url"][0].strip()
+                    name = params.get("name", [url.split("://")[1].split("/")[0] if "://" in url else "site"])[0].strip() or url.split("//")[1].split("/")[0]
+                    expected = int(params.get("expected", ["200"])[0])
+                    if hasattr(bot, "_uptime_monitor"):
+                        bot._uptime_monitor.add_target(name, url, expected)
+                
+                self._send_redirect("/uptime?added=1")
+            elif path == "/api/remove-uptime":
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length).decode()
+                params = parse_qs(body)
+                name = params.get("name", [""])[0]
+                if name and hasattr(bot, "_uptime_monitor"):
+                    bot._uptime_monitor.remove_target(name)
+                self._send_redirect("/uptime")
+            elif path == "/api/check-uptime":
+                if hasattr(bot, "_uptime_monitor"):
+                    threading.Thread(target=lambda: self._check_uptime_async(bot._uptime_monitor)).start()
+                self._send_redirect("/uptime")
             elif path == "/api/update":
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode()
@@ -400,6 +429,90 @@ function toggleMenu() {{ document.querySelector('nav').classList.toggle('open');
 </div>"""
 
             self._send_html(self._render_page(content, "status"))
+
+        def _page_uptime(self):
+            from i18n import get_translator
+            t = get_translator(config.language)
+            
+            targets = []
+            if hasattr(bot, "_uptime_monitor"):
+                targets = bot._uptime_monitor.get_targets()
+            
+            # Run checks
+            check_results = []
+            if targets and hasattr(bot, "_uptime_monitor"):
+                try:
+                    check_results = bot._uptime_monitor.check_now()
+                except:
+                    pass
+            
+            # Build rows
+            rows = ""
+            checked_names = {r["name"]: r for r in check_results}
+            for target in targets:
+                name = target["name"]
+                url = target["url"]
+                expected = target.get("expected_status", 200)
+                
+                result = checked_names.get(name, {})
+                status = result.get("status", "⏳")
+                code = result.get("code", "pending")
+                
+                rows += f"""<tr>
+<td>{name}</td>
+<td><span class="code">{url}</span></td>
+<td>{status} {code}</td>
+<td>
+<form method="POST" action="/api/remove-uptime" style="display:inline">
+<input type="hidden" name="name" value="{name}">
+<button type="submit" class="btn-sm btn-outline">Remove</button>
+</form>
+</td>
+</tr>"""
+            
+            added = "?added=1" in self.path
+            added_html = f'<div style="background:#1a3a2a;color:#3fb950;padding:10px;border-radius:6px;margin-bottom:16px">Target added!</div>' if added else ""
+            
+            content = f"""
+{added_html}
+<div class="card">
+<h2>⏱️ Add Uptime Target</h2>
+<form method="POST" action="/uptime">
+<div class="grid">
+<div>
+<label>Name (optional)</label>
+<input type="text" name="name" placeholder="My Website">
+</div>
+<div>
+<label>URL *</label>
+<input type="text" name="url" placeholder="https://example.com" required>
+</div>
+</div>
+<div>
+<label>Expected Status</label>
+<input type="number" name="expected" value="200" style="max-width:100px">
+</div>
+<button type="submit" class="btn btn-accent">Add Target</button>
+</form>
+</div>
+
+<div class="card">
+<h2>📊 Monitored Sites ({len(targets)})</h2>
+<a href="/api/check-uptime" class="btn btn-outline" style="margin-bottom:12px;display:inline-block">🔄 Check Now</a>
+<table>
+<tr><th>Name</th><th>URL</th><th>Status</th><th>Actions</th></tr>
+{rows if targets else '<tr><td colspan="4">No targets configured. Add one above!</td></tr>'}
+</table>
+</div>"""
+            
+            self._send_html(self._render_page(content, "uptime"))
+
+        def _check_uptime_async(self, uptime_monitor):
+            """Run uptime check in background."""
+            try:
+                uptime_monitor.check_now()
+            except Exception as e:
+                print(f"Uptime check error: {e}")
 
         def _page_history(self):
             from i18n import get_translator
