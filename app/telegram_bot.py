@@ -2,12 +2,14 @@
 """Telegram Bot - handles messages, callbacks, and notifications."""
 
 import json
-import subprocess
 import os
+import subprocess
 import sys
 import threading
 import urllib.request
 import urllib.parse
+
+from groq_agent import run_docker_command
 
 
 class TelegramBot:
@@ -878,5 +880,44 @@ class TelegramBot:
                 + self.t("help_logs") + "\n"
                 + self.t("help_lang") + "\n"
                 + self.t("help_settings") + "\n"
-                + self.t("help_help")
+                + self.t("help_help") + "\n\n"
+                + "🤖 /ai — Ask AI to manage containers"
             )
+
+        # Groq AI agent (natural language Docker management)
+        elif text.startswith("/ai") or os.environ.get("GROQ_API_KEY"):
+            groq_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GROQ_KEY")
+            if not groq_key:
+                self.send_message("❌ Set GROQ_API_KEY environment variable")
+                return
+            
+            if not hasattr(self, "_groq_agent") or not self._groq_agent:
+                from groq_agent import GroqAgent
+                self._groq_agent = GroqAgent(groq_key)
+            
+            if text.startswith("/ai "):
+                user_msg = text[4:].strip()
+            elif text == "/ai":
+                user_msg = "show me my containers"
+            else:
+                user_msg = text
+            
+            # Check for confirmation
+            confirm = None
+            if hasattr(self, "_pending_action") and user_msg.lower() in ("yes", "confirm", "y", "ok"):
+                confirm = self._pending_action
+                self._pending_action = None
+            
+            self.send_message("🤔 Thinking...")
+            response = self._groq_agent.chat(user_msg, confirm)
+            
+            # Check for command to execute
+            cmd = self._groq_agent.extract_command(response)
+            if cmd and not confirm:
+                self._pending_action = cmd
+                self.send_message(response + "\n\n❓ Say 'yes' to confirm, or ask something else.")
+            elif confirm:
+                result = run_docker_command(cmd)
+                self.send_message(f"✅ Executed: {cmd}\n\n{result}")
+            else:
+                self.send_message(response)

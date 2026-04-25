@@ -1,6 +1,7 @@
 services:
   docksentry:
-    image: amayer1983/docksentry:latest
+    build: .
+    image: adrianejovir/docksentry:latest
     container_name: docksentry
     restart: unless-stopped
     environment:
@@ -10,7 +11,11 @@ services:
       - EXCLUDE_CONTAINERS=${EXCLUDE_CONTAINERS:-}
       - AUTO_SELFUPDATE=${AUTO_SELFUPDATE:-false}
       - LANGUAGE=${LANGUAGE:-en}
-      - TZ=${TZ:-Europe/Berlin}
+      - TZ=${TZ:-Asia/Manila}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - WEB_UI=${WEB_UI:-true}
+      - WEB_PORT=${WEB_PORT:-1234}
+      - WEB_PASSWORD=${WEB_PASSWORD:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docksentry_data:/data
@@ -20,6 +25,8 @@ services:
       - ${COMPOSE_DIR:-/data/compose}:/data/compose
     security_opt:
       - no-new-privileges:true
+    ports:
+      - "${WEB_PORT:-1234}:1234"
 
 volumes:
   docksentry_data:

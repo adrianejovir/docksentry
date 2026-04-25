@@ -12,6 +12,9 @@ COPY app/ .
 
 RUN mkdir -p /data
 
+# Python dependencies
+RUN pip install --no-cache-dir groq
+
 ENV BOT_TOKEN=""
 ENV CHAT_ID=""
 ENV CRON_SCHEDULE="0 18 * * *"
