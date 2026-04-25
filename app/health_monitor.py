@@ -16,7 +16,7 @@ class HealthMonitor:
         self.thread = None
         self.check_interval = check_interval  # seconds
         self.state_file = os.path.join(config.data_dir, "health_state.json")
-        self_alert_config_file = os.path.join(config.data_dir, "alert_config.json")
+        self.alert_config_file = os.path.join(config.data_dir, "alert_config.json")
         self._load_state()
         self._load_alert_config()
 
@@ -141,5 +141,5 @@ class HealthMonitor:
 
     def _save_alert_config(self):
         """Save alert configuration."""
-        with open(self_alert_config_file, "w") as f:
+        with open(self.alert_config_file, "w") as f:
             json.dump(self.alert_config, f)
