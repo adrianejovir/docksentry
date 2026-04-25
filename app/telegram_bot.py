@@ -862,6 +862,179 @@ class TelegramBot:
             else:
                 self.send_message(self.t("logs_empty", name=name))
 
+        # /stats - Resource usage
+        elif text == "/stats":
+            result = subprocess.run(
+                ["docker", "stats", "--no-stream", "--format", "{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.stdout.strip():
+                lines = result.stdout.strip().split("\n")
+                msg = "📊 *Resource Usage:*\n"
+                for line in lines[:10]:
+                    parts = line.split("|")
+                    if len(parts) >= 3:
+                        name = parts[0][:20]
+                        cpu = parts[1] if len(parts) > 1 else "0%"
+                        mem = parts[2] if len(parts) > 2 else "-"
+                        msg += f"• `{name}`\n   CPU: {cpu} | Mem: {mem}\n"
+                self.send_message(msg)
+            else:
+                self.send_message("No running containers")
+
+        # /images - List Docker images
+        elif text == "/images":
+            result = subprocess.run(
+                ["docker", "images", "--format", "{{.Repository}}|{{.Tag}}|{{.Size}}|{{.CreatedSince}}"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.stdout.strip():
+                lines = result.stdout.strip().split("\n")
+                msg = "🖼️ *Docker Images:*\n"
+                for line in lines[:15]:
+                    parts = line.split("|")
+                    if len(parts) >= 2:
+                        repo = parts[0][:25]
+                        tag = parts[1] if len(parts) > 1 else "latest"
+                        size = parts[2] if len(parts) > 2 else "-"
+                        msg += f"• `{repo}:{tag}` ({size})\n"
+                self.send_message(msg)
+            else:
+                self.send_message("No images found")
+
+        # /stop <container> - Stop a container
+        elif text.startswith("/stop "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /stop <container_name>")
+                return
+            name = parts[1].strip()
+            self.send_message(f"⏹️ Stopping `{name}`...")
+            result = subprocess.run(
+                ["docker", "stop", name],
+                capture_output=True, text=True, timeout=60
+            )
+            if result.returncode == 0:
+                self.send_message(f"✅ Stopped `{name}`")
+            else:
+                self.send_message(f"❌ Failed: {result.stderr}")
+
+        # /start <container> - Start a container
+        elif text.startswith("/start "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /start <container_name>")
+                return
+            name = parts[1].strip()
+            self.send_message(f"▶️ Starting `{name}`...")
+            result = subprocess.run(
+                ["docker", "start", name],
+                capture_output=True, text=True, timeout=60
+            )
+            if result.returncode == 0:
+                self.send_message(f"✅ Started `{name}`")
+            else:
+                self.send_message(f"❌ Failed: {result.stderr}")
+
+        # /restart <container> - Restart a container
+        elif text.startswith("/restart "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /restart <container_name>")
+                return
+            name = parts[1].strip()
+            self.send_message(f"🔄 Restarting `{name}`...")
+            result = subprocess.run(
+                ["docker", "restart", name],
+                capture_output=True, text=True, timeout=90
+            )
+            if result.returncode == 0:
+                self.send_message(f"✅ Restarted `{name}`")
+            else:
+                self.send_message(f"❌ Failed: {result.stderr}")
+
+        # /remove <container> - Remove a container
+        elif text.startswith("/remove ") or text.startswith("/rm "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /remove <container_name>")
+                return
+            name = parts[1].strip()
+            self.send_message(f"🗑️ Removing `{name}`...")
+            result = subprocess.run(
+                ["docker", "rm", "-f", name],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                self.send_message(f"✅ Removed `{name}`")
+            else:
+                self.send_message(f"❌ Failed: {result.stderr}")
+
+        # /prune - Clean up unused resources
+        elif text == "/prune":
+            self.send_message("🧹 Cleaning up...")
+            result = subprocess.run(
+                ["docker", "system", "prune", "-a", "--force", "--filter", "until=168h"],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                self.send_message("✅ Cleanup complete")
+            else:
+                self.send_message(f"❌ Failed: {result.stderr}")
+
+        # /inspect <container> - Inspect container details
+        elif text.startswith("/inspect "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /inspect <container_name>")
+                return
+            name = parts[1].strip()
+            result = subprocess.run(
+                ["docker", "inspect", name],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.returncode != 0:
+                self.send_message(f"❌ Container `{name}` not found")
+                return
+            try:
+                data = json.loads(result.stdout)
+                if data:
+                    c = data[0]
+                    config = c.get("Config", {})
+                    state = c.get("State", {})
+                    network = c.get("NetworkSettings", {})
+                    ports = network.get("Ports", {})
+                    
+                    # Build port string
+                    port_str = []
+                    for container_port, bindings in ports.items():
+                        if bindings:
+                            for b in bindings:
+                                host_port = b.get("HostPort", "")
+                                if host_port:
+                                    port_str.append(f"{container_port}→{host_port}")
+                    
+                    msg = f"🔍 *{name}:*\n"
+                    msg += f"Status: `{state.get('status', 'N/A')}`\n"
+                    msg += f"Image: `{config.get('Image', 'N/A')}`\n"
+                    if port_str:
+                        msg += f"Ports: `{', '.join(port_str[:5])}`\n"
+                    msg += f"Created: `{c.get('Created', 'N/A')[:19]}`\n"
+                    self.send_message(msg)
+            except:
+                self.send_message("Error parsing container info")
+
+        # /system - Docker system info
+        elif text == "/system":
+            result = subprocess.run(
+                ["docker", "system", "df"],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.stdout.strip():
+                self.send_message(f"💾 *Docker System:*\n```\n{result.stdout.strip()}\n```")
+            else:
+                self.send_message("Docker system info unavailable")
+
         elif text == "/help" or text == "/start":
             from version import VERSION
             self.send_message(
@@ -881,7 +1054,17 @@ class TelegramBot:
                 + self.t("help_lang") + "\n"
                 + self.t("help_settings") + "\n"
                 + self.t("help_help") + "\n\n"
-                + "🤖 /ai — Ask AI to manage containers"
+                + "🤖 /ai — Ask AI to manage containers\n\n"
+                + "*📦 Container Management:*\n"
+                + "📊 /stats — Resource usage (CPU/RAM)\n"
+                + "🖼️ /images — List Docker images\n"
+                + "🔍 /inspect <name> — Container details\n"
+                + "💾 /system — Docker system info\n"
+                + "⏹️ /stop <name> — Stop container\n"
+                + "▶️ /start <name> — Start container\n"
+                + "🔄 /restart <name> — Restart container\n"
+                + "🗑️ /remove <name> — Remove container\n"
+                + "🧹 /prune — Clean up unused resources"
             )
 
         # Groq AI agent (natural language Docker management)
