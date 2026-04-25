@@ -12,6 +12,7 @@ from telegram_bot import TelegramBot
 from update_checker import UpdateChecker
 from scheduler import Scheduler
 from notifier import Notifier
+from health_monitor import HealthMonitor
 
 
 def main():
@@ -26,12 +27,20 @@ def main():
     bot.notifier = notifier
     checker = UpdateChecker(config)
     scheduler = Scheduler(config, checker, bot)
+    health_monitor = None
     web = None
+
+    # Start health monitoring (every 60 seconds)
+    health_monitor = HealthMonitor(config, bot, check_interval=60)
+    health_monitor.start()
+    bot._health_monitor = health_monitor  # Attach to bot for Telegram commands
 
     # Graceful shutdown
     def shutdown(sig, frame):
         print("Shutting down...")
         scheduler.stop()
+        if health_monitor:
+            health_monitor.stop()
         bot.stop()
         if web:
             web.stop()

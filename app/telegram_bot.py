@@ -982,6 +982,47 @@ class TelegramBot:
             else:
                 self.send_message(f"❌ Failed: {result.stderr}")
 
+        # /alerts - Toggle health alerts
+        elif text == "/alerts":
+            if not hasattr(self, "_health_monitor"):
+                self.send_message("❌ Health monitor not available")
+                return
+            # Toggle
+            if self._health_monitor.alert_config.get("enabled", True):
+                self._health_monitor.alert_config["enabled"] = False
+                self._health_monitor._save_alert_config()
+                self.send_message("🔇 Health alerts disabled")
+            else:
+                self._health_monitor.alert_config["enabled"] = True
+                self._health_monitor._save_alert_config()
+                self.send_message("🔔 Health alerts enabled")
+
+        # /ignore - Ignore a container for alerts
+        elif text.startswith("/ignore "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /ignore <container_name>\nUse /alerts to see ignored list")
+                return
+            name = parts[1].strip()
+            if not hasattr(self, "_health_monitor"):
+                self.send_message("❌ Health monitor not available")
+                return
+            self._health_monitor.add_ignore(name)
+            self.send_message(f"🔇 Now ignoring alerts for `{name}`")
+
+        # /unignore - Stop ignoring a container
+        elif text.startswith("/unignore "):
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2:
+                self.send_message("Usage: /unignore <container_name>")
+                return
+            name = parts[1].strip()
+            if not hasattr(self, "_health_monitor"):
+                self.send_message("❌ Health monitor not available")
+                return
+            self._health_monitor.remove_ignore(name)
+            self.send_message(f"🔔 Now monitoring `{name}` for alerts")
+
         # /inspect <container> - Inspect container details
         elif text.startswith("/inspect "):
             parts = text.split(maxsplit=1)
@@ -1064,7 +1105,11 @@ class TelegramBot:
                 + "▶️ /start <name> — Start container\n"
                 + "🔄 /restart <name> — Restart container\n"
                 + "🗑️ /remove <name> — Remove container\n"
-                + "🧹 /prune — Clean up unused resources"
+                + "🧹 /prune — Clean up unused resources\n\n"
+                + "*🔔 Health Alerts:*\n"
+                + "🔔 /alerts — Toggle alerts on/off\n"
+                + "🔇 /ignore <name> — Ignore container\n"
+                + "🔔 /unignore <name> — Monitor container"
             )
 
         # Groq AI agent (natural language Docker management)
